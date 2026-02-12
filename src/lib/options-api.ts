@@ -109,46 +109,81 @@ function parseEuNum(s: string): number | null {
   return isNaN(n) ? null : n;
 }
 
-/** Extract available strikes from scraped markdown */
-export function extractStrikes(markdown: string): number[] {
+/** Extract available strikes from scraped markdown and/or HTML */
+export function extractStrikes(markdown: string, html?: string): number[] {
   const strikes: number[] = [];
 
-  // Strategy 1: Look for strike values in the pre-table area (comma-separated European numbers)
-  const tableStart = markdown.indexOf('| Calls |') !== -1
-    ? markdown.indexOf('| Calls |')
-    : markdown.indexOf('|');
-  const preTable = tableStart > 0 ? markdown.substring(0, tableStart) : markdown;
-
-  // Match European-format numbers (e.g. 76,330 or 1.234,56 or 4500 or 4500,00)
-  const euMatches = preTable.match(/\d[\d\s.]*,\d+/g);
-  if (euMatches) {
-    for (const m of euMatches) {
-      const val = parseEuNum(m);
-      if (val !== null && val > 0) {
-        strikes.push(val);
+  // Strategy 1 (BEST): Extract from HTML data-overflow-tooltip-text attributes
+  // These contain the strike values displayed in the picker buttons (e.g. "0,9000", "76,330")
+  if (html) {
+    const tooltipMatches = html.match(/data-overflow-tooltip-text="([^"]+)"/g);
+    if (tooltipMatches) {
+      for (const m of tooltipMatches) {
+        const valStr = m.replace('data-overflow-tooltip-text="', '').replace('"', '');
+        // Only parse values that look like numbers (European format with comma or plain numbers)
+        if (/^[\d\s.,]+$/.test(valStr)) {
+          const val = parseEuNum(valStr);
+          if (val !== null && val > 0) {
+            strikes.push(val);
+          }
+        }
       }
     }
   }
 
-  // Strategy 2: Look for integer strikes (common for indices like ES at 5000, 5100, etc.)
-  const intMatches = preTable.match(/(?<!\d)\d{2,6}(?!\d|,\d)/g);
-  if (intMatches) {
-    for (const m of intMatches) {
-      const val = parseInt(m, 10);
-      // Filter reasonable strike values (> 1, < 100000)
-      if (!isNaN(val) && val > 1 && val < 100000 && !strikes.includes(val)) {
-        strikes.push(val);
+  // Strategy 2: Extract from HTML itemContent spans (backup for Strategy 1)
+  if (html && strikes.length === 0) {
+    const itemMatches = html.match(/itemContent-[^"]*">([\d\s.,]+)<\/span>/g);
+    if (itemMatches) {
+      for (const m of itemMatches) {
+        const valStr = m.replace(/itemContent-[^"]*">/, '').replace('</span>', '');
+        const val = parseEuNum(valStr);
+        if (val !== null && val > 0) {
+          strikes.push(val);
+        }
       }
     }
   }
 
-  // Strategy 3: Look for "strike=" in URLs within the markdown
-  const urlMatches = markdown.match(/strike=([\d.]+)/g);
-  if (urlMatches) {
-    for (const m of urlMatches) {
-      const val = parseFloat(m.replace('strike=', ''));
-      if (!isNaN(val) && val > 0 && !strikes.includes(val)) {
-        strikes.push(val);
+  // Strategy 3: Look for strike values in the pre-table markdown area
+  if (strikes.length === 0) {
+    const tableStart = markdown.indexOf('| Calls |') !== -1
+      ? markdown.indexOf('| Calls |')
+      : markdown.indexOf('|');
+    const preTable = tableStart > 0 ? markdown.substring(0, tableStart) : markdown;
+
+    // Match European-format numbers (e.g. 76,330 or 1.234,56 or 0,9000)
+    const euMatches = preTable.match(/\d[\d\s.]*,\d+/g);
+    if (euMatches) {
+      for (const m of euMatches) {
+        const val = parseEuNum(m);
+        if (val !== null && val > 0) {
+          strikes.push(val);
+        }
+      }
+    }
+
+    // Integer strikes (e.g. 5000, 450)
+    const intMatches = preTable.match(/(?<!\d)\d{2,6}(?!\d|,\d)/g);
+    if (intMatches) {
+      for (const m of intMatches) {
+        const val = parseInt(m, 10);
+        if (!isNaN(val) && val > 1 && val < 100000 && !strikes.includes(val)) {
+          strikes.push(val);
+        }
+      }
+    }
+  }
+
+  // Strategy 4: Look for "strike=" in URLs
+  if (strikes.length === 0) {
+    const urlMatches = markdown.match(/strike=([\d.]+)/g);
+    if (urlMatches) {
+      for (const m of urlMatches) {
+        const val = parseFloat(m.replace('strike=', ''));
+        if (!isNaN(val) && val > 0 && !strikes.includes(val)) {
+          strikes.push(val);
+        }
       }
     }
   }
