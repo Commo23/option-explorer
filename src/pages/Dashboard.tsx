@@ -54,9 +54,10 @@ const Dashboard = () => {
 
       if (result.success) {
         const markdown = result.data?.data?.markdown || result.data?.markdown || '';
+        const html = result.data?.data?.html || result.data?.html || '';
 
-        // Extract strikes from the page
-        const strikes = extractStrikes(markdown);
+        // Extract strikes from the page (use HTML for reliable extraction)
+        const strikes = extractStrikes(markdown, html);
         if (strikes.length > 0) {
           setAvailableStrikes(strikes);
         }
