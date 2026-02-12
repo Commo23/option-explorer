@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Zap, TrendingUp, Wheat, Gem, DollarSign } from 'lucide-react';
+import { Zap, TrendingUp, Wheat, Gem, DollarSign, BarChart3, Landmark } from 'lucide-react';
 import { CATEGORIES, type TickerInfo } from '@/lib/options-api';
 
 const categoryIcons: Record<string, React.ReactNode> = {
   'Énergie': <Zap className="h-4 w-4" />,
   'Agriculture': <Wheat className="h-4 w-4" />,
   'Métaux': <Gem className="h-4 w-4" />,
+  'Indices': <BarChart3 className="h-4 w-4" />,
+  'Taux': <Landmark className="h-4 w-4" />,
   'Devises': <DollarSign className="h-4 w-4" />,
 };
 
