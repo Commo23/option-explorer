@@ -43,24 +43,34 @@ export interface CategoryTickers {
 
 export const CATEGORIES: CategoryTickers = {
   'Énergie': [
-    { symbol: 'CL', name: 'Crude Oil', exchange: 'NYMEX', tvSymbol: 'NYMEX-CL1!' },
+    { symbol: 'CL', name: 'Crude Oil WTI', exchange: 'NYMEX', tvSymbol: 'NYMEX-CL1!' },
+    { symbol: 'BRN', name: 'Brent Crude', exchange: 'NYMEX', tvSymbol: 'NYMEX-BRN1!' },
     { symbol: 'NG', name: 'Natural Gas', exchange: 'NYMEX', tvSymbol: 'NYMEX-NG1!' },
     { symbol: 'RB', name: 'RBOB Gasoline', exchange: 'NYMEX', tvSymbol: 'NYMEX-RB1!' },
     { symbol: 'HO', name: 'Heating Oil', exchange: 'NYMEX', tvSymbol: 'NYMEX-HO1!' },
-    { symbol: 'BRN', name: 'Brent Crude', exchange: 'NYMEX', tvSymbol: 'NYMEX-BRN1!' },
+    { symbol: 'NG', name: 'Henry Hub NG (Last Day)', exchange: 'NYMEX', tvSymbol: 'NYMEX-HH1!' },
+    { symbol: 'MCL', name: 'Micro Crude Oil', exchange: 'NYMEX', tvSymbol: 'NYMEX-MCL1!' },
+    { symbol: 'QG', name: 'E-mini Natural Gas', exchange: 'NYMEX', tvSymbol: 'NYMEX-QG1!' },
+    { symbol: 'QM', name: 'E-mini Crude Oil', exchange: 'NYMEX', tvSymbol: 'NYMEX-QM1!' },
   ],
   'Agriculture': [
     { symbol: 'ZC', name: 'Corn', exchange: 'CBOT', tvSymbol: 'CBOT-ZC1!' },
-    { symbol: 'ZW', name: 'Wheat', exchange: 'CBOT', tvSymbol: 'CBOT-ZW1!' },
+    { symbol: 'ZW', name: 'Wheat (Chicago)', exchange: 'CBOT', tvSymbol: 'CBOT-ZW1!' },
+    { symbol: 'KE', name: 'Wheat (Kansas)', exchange: 'CBOT', tvSymbol: 'CBOT-KE1!' },
     { symbol: 'ZS', name: 'Soybeans', exchange: 'CBOT', tvSymbol: 'CBOT-ZS1!' },
     { symbol: 'ZM', name: 'Soybean Meal', exchange: 'CBOT', tvSymbol: 'CBOT-ZM1!' },
     { symbol: 'ZL', name: 'Soybean Oil', exchange: 'CBOT', tvSymbol: 'CBOT-ZL1!' },
+    { symbol: 'ZR', name: 'Rough Rice', exchange: 'CBOT', tvSymbol: 'CBOT-ZR1!' },
+    { symbol: 'ZO', name: 'Oats', exchange: 'CBOT', tvSymbol: 'CBOT-ZO1!' },
     { symbol: 'KC', name: 'Coffee', exchange: 'NYMEX', tvSymbol: 'NYMEX-KC1!' },
     { symbol: 'CT', name: 'Cotton', exchange: 'NYMEX', tvSymbol: 'NYMEX-CT1!' },
-    { symbol: 'SB', name: 'Sugar', exchange: 'NYMEX', tvSymbol: 'NYMEX-SB1!' },
+    { symbol: 'SB', name: 'Sugar #11', exchange: 'NYMEX', tvSymbol: 'NYMEX-SB1!' },
     { symbol: 'CC', name: 'Cocoa', exchange: 'NYMEX', tvSymbol: 'NYMEX-CC1!' },
+    { symbol: 'OJ', name: 'Orange Juice', exchange: 'NYMEX', tvSymbol: 'NYMEX-OJ1!' },
+    { symbol: 'LBS', name: 'Lumber', exchange: 'CME', tvSymbol: 'CME-LBS1!' },
     { symbol: 'LE', name: 'Live Cattle', exchange: 'CME', tvSymbol: 'CME-LE1!' },
     { symbol: 'HE', name: 'Lean Hogs', exchange: 'CME', tvSymbol: 'CME-HE1!' },
+    { symbol: 'GF', name: 'Feeder Cattle', exchange: 'CME', tvSymbol: 'CME-GF1!' },
   ],
   'Métaux': [
     { symbol: 'GC', name: 'Gold', exchange: 'COMEX', tvSymbol: 'COMEX-GC1!' },
@@ -68,6 +78,25 @@ export const CATEGORIES: CategoryTickers = {
     { symbol: 'HG', name: 'Copper', exchange: 'COMEX', tvSymbol: 'COMEX-HG1!' },
     { symbol: 'PL', name: 'Platinum', exchange: 'NYMEX', tvSymbol: 'NYMEX-PL1!' },
     { symbol: 'PA', name: 'Palladium', exchange: 'NYMEX', tvSymbol: 'NYMEX-PA1!' },
+    { symbol: 'MGC', name: 'Micro Gold', exchange: 'COMEX', tvSymbol: 'COMEX-MGC1!' },
+    { symbol: 'SIL', name: 'Micro Silver', exchange: 'COMEX', tvSymbol: 'COMEX-SIL1!' },
+    { symbol: 'ALI', name: 'Aluminum', exchange: 'COMEX', tvSymbol: 'COMEX-ALI1!' },
+  ],
+  'Indices': [
+    { symbol: 'ES', name: 'E-mini S&P 500', exchange: 'CME', tvSymbol: 'CME-ES1!' },
+    { symbol: 'NQ', name: 'E-mini Nasdaq 100', exchange: 'CME', tvSymbol: 'CME-NQ1!' },
+    { symbol: 'YM', name: 'E-mini Dow Jones', exchange: 'CBOT', tvSymbol: 'CBOT-YM1!' },
+    { symbol: 'RTY', name: 'E-mini Russell 2000', exchange: 'CME', tvSymbol: 'CME-RTY1!' },
+    { symbol: 'MES', name: 'Micro E-mini S&P', exchange: 'CME', tvSymbol: 'CME-MES1!' },
+    { symbol: 'MNQ', name: 'Micro E-mini Nasdaq', exchange: 'CME', tvSymbol: 'CME-MNQ1!' },
+    { symbol: 'VX', name: 'VIX Futures', exchange: 'CFE', tvSymbol: 'CFE-VX1!' },
+  ],
+  'Taux': [
+    { symbol: 'ZN', name: '10-Year T-Note', exchange: 'CBOT', tvSymbol: 'CBOT-ZN1!' },
+    { symbol: 'ZB', name: '30-Year T-Bond', exchange: 'CBOT', tvSymbol: 'CBOT-ZB1!' },
+    { symbol: 'ZF', name: '5-Year T-Note', exchange: 'CBOT', tvSymbol: 'CBOT-ZF1!' },
+    { symbol: 'ZT', name: '2-Year T-Note', exchange: 'CBOT', tvSymbol: 'CBOT-ZT1!' },
+    { symbol: 'GE', name: 'Eurodollar', exchange: 'CME', tvSymbol: 'CME-GE1!' },
   ],
   'Devises': [
     { symbol: '6E', name: 'Euro FX', exchange: 'CME', tvSymbol: 'CME-6E1!' },
@@ -96,21 +125,45 @@ function parseEuNum(s: string): number | null {
   return isNaN(n) ? null : n;
 }
 
-/** Extract available strikes from scraped markdown (listed before the table) */
+/** Extract available strikes from scraped markdown */
 export function extractStrikes(markdown: string): number[] {
   const strikes: number[] = [];
-  // Strikes are listed as comma-separated values before the table
-  // Look for lines before the "| Calls |" table header
-  const tableStart = markdown.indexOf('| Calls |');
-  if (tableStart === -1) return strikes;
 
-  const preTable = markdown.substring(0, tableStart);
-  // Find all number patterns (European format: XX,XX)
-  const matches = preTable.match(/\d+,\d+/g);
-  if (matches) {
-    for (const m of matches) {
-      const val = parseFloat(m.replace(',', '.'));
-      if (!isNaN(val) && val > 0) {
+  // Strategy 1: Look for strike values in the pre-table area (comma-separated European numbers)
+  const tableStart = markdown.indexOf('| Calls |') !== -1
+    ? markdown.indexOf('| Calls |')
+    : markdown.indexOf('|');
+  const preTable = tableStart > 0 ? markdown.substring(0, tableStart) : markdown;
+
+  // Match European-format numbers (e.g. 76,330 or 1.234,56 or 4500 or 4500,00)
+  const euMatches = preTable.match(/\d[\d\s.]*,\d+/g);
+  if (euMatches) {
+    for (const m of euMatches) {
+      const val = parseEuNum(m);
+      if (val !== null && val > 0) {
+        strikes.push(val);
+      }
+    }
+  }
+
+  // Strategy 2: Look for integer strikes (common for indices like ES at 5000, 5100, etc.)
+  const intMatches = preTable.match(/(?<!\d)\d{2,6}(?!\d|,\d)/g);
+  if (intMatches) {
+    for (const m of intMatches) {
+      const val = parseInt(m, 10);
+      // Filter reasonable strike values (> 1, < 100000)
+      if (!isNaN(val) && val > 1 && val < 100000 && !strikes.includes(val)) {
+        strikes.push(val);
+      }
+    }
+  }
+
+  // Strategy 3: Look for "strike=" in URLs within the markdown
+  const urlMatches = markdown.match(/strike=([\d.]+)/g);
+  if (urlMatches) {
+    for (const m of urlMatches) {
+      const val = parseFloat(m.replace('strike=', ''));
+      if (!isNaN(val) && val > 0 && !strikes.includes(val)) {
         strikes.push(val);
       }
     }
