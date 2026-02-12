@@ -1,1 +1,4 @@
 project_id = "nmsoliywpheqmxvlmdpm"
+
+[functions.scrape-options]
+verify_jwt = false
