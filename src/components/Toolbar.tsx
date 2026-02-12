@@ -1,7 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
-import type { TickerInfo, OptionsData } from '@/lib/options-api';
+import type { TickerInfo } from '@/lib/options-api';
 
 interface ToolbarProps {
   ticker: TickerInfo | null;
