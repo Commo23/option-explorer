@@ -1,8 +1,16 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { CategorySidebar } from '@/components/CategorySidebar';
 import { OptionsTable } from '@/components/OptionsTable';
 import { Toolbar } from '@/components/Toolbar';
-import { CATEGORIES, type TickerInfo, type OptionsData, scrapeOptionsChain, buildTradingViewUrl, parseOptionsFromMarkdown } from '@/lib/options-api';
+import {
+  CATEGORIES,
+  type TickerInfo,
+  type OptionsRow,
+  scrapeOptionsChain,
+  buildTradingViewUrl,
+  parseOptionsTable,
+  extractStrikes,
+} from '@/lib/options-api';
 import { useToast } from '@/components/ui/use-toast';
 
 const Dashboard = () => {
@@ -10,52 +18,64 @@ const Dashboard = () => {
   const [selectedCategory, setSelectedCategory] = useState('Énergie');
   const [selectedTicker, setSelectedTicker] = useState<TickerInfo | null>(null);
   const [selectedStrike, setSelectedStrike] = useState<number | null>(null);
-  const [optionsData, setOptionsData] = useState<OptionsData[]>([]);
+  const [availableStrikes, setAvailableStrikes] = useState<number[]>([]);
+  const [optionsData, setOptionsData] = useState<OptionsRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  const strikes = useMemo(() => {
-    const unique = [...new Set(optionsData.map((d) => d.strike))];
-    return unique.sort((a, b) => a - b);
-  }, [optionsData]);
 
   const handleCategoryChange = (cat: string) => {
     setSelectedCategory(cat);
     setSelectedTicker(null);
     setOptionsData([]);
     setSelectedStrike(null);
+    setAvailableStrikes([]);
   };
 
   const handleTickerChange = (ticker: TickerInfo) => {
     setSelectedTicker(ticker);
     setOptionsData([]);
     setSelectedStrike(null);
+    setAvailableStrikes([]);
   };
 
-  const handleScrape = async () => {
-    if (!selectedTicker) return;
+  const handleStrikeChange = (strike: number | null) => {
+    setSelectedStrike(strike);
+    // Auto-scrape when strike changes
+    if (strike !== null && selectedTicker) {
+      doScrape(selectedTicker, strike);
+    }
+  };
 
+  const doScrape = async (ticker: TickerInfo, strike?: number | null) => {
     setIsLoading(true);
     try {
-      const url = buildTradingViewUrl(selectedTicker.tvSymbol, selectedStrike ?? undefined);
+      const url = buildTradingViewUrl(ticker.tvSymbol, strike ?? undefined);
+      console.log('Scraping URL:', url);
       const result = await scrapeOptionsChain(url);
 
       if (result.success) {
         const markdown = result.data?.data?.markdown || result.data?.markdown || '';
-        const parsed = parseOptionsFromMarkdown(markdown);
+
+        // Extract strikes from the page
+        const strikes = extractStrikes(markdown);
+        if (strikes.length > 0) {
+          setAvailableStrikes(strikes);
+        }
+
+        // Parse options table
+        const parsed = parseOptionsTable(markdown);
 
         if (parsed.length > 0) {
           setOptionsData(parsed);
-          toast({ title: 'Succès', description: `${parsed.length} options récupérées` });
+          toast({ title: 'Succès', description: `${parsed.length} maturités récupérées` });
         } else {
-          // Use demo data as fallback for display
-          setOptionsData(generateDemoData(selectedTicker));
+          setOptionsData(generateDemoData());
           toast({
             title: 'Données démo',
-            description: 'Données scrapées non parsables, affichage de données démo.',
+            description: 'Table non trouvée dans le scraping, affichage de données démo.',
           });
         }
       } else {
-        setOptionsData(generateDemoData(selectedTicker));
+        setOptionsData(generateDemoData());
         toast({
           title: 'Données démo',
           description: result.error || 'Erreur de scraping, affichage de données démo.',
@@ -63,7 +83,7 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Scrape error:', error);
-      setOptionsData(generateDemoData(selectedTicker));
+      setOptionsData(generateDemoData());
       toast({
         title: 'Données démo',
         description: 'Erreur réseau, affichage de données démo.',
@@ -71,6 +91,11 @@ const Dashboard = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleScrape = () => {
+    if (!selectedTicker) return;
+    doScrape(selectedTicker, selectedStrike);
   };
 
   return (
@@ -84,16 +109,16 @@ const Dashboard = () => {
       <main className="flex-1 flex flex-col overflow-hidden">
         <Toolbar
           ticker={selectedTicker}
-          strikes={strikes}
+          strikes={availableStrikes}
           selectedStrike={selectedStrike}
-          onStrikeChange={setSelectedStrike}
+          onStrikeChange={handleStrikeChange}
           onScrape={handleScrape}
           isLoading={isLoading}
           dataCount={optionsData.length}
         />
         <OptionsTable
           data={optionsData}
-          selectedStrike={selectedStrike}
+          strike={selectedStrike}
           isLoading={isLoading}
         />
       </main>
@@ -101,55 +126,51 @@ const Dashboard = () => {
   );
 };
 
-function generateDemoData(ticker: TickerInfo): OptionsData[] {
-  const basePrice = getBasePrice(ticker.symbol);
-  const strikes: OptionsData[] = [];
-  for (let i = -10; i <= 10; i++) {
-    const step = getStepSize(ticker.symbol);
-    const strike = Math.round((basePrice + i * step) * 100) / 100;
-    const distance = Math.abs(i);
-    const callIV = 20 + distance * 1.5 + Math.random() * 5;
-    const putIV = 22 + distance * 1.8 + Math.random() * 5;
-    const callPrice = Math.max(0.01, (basePrice - strike) * 0.8 + callIV * 0.05);
-    const putPrice = Math.max(0.01, (strike - basePrice) * 0.8 + putIV * 0.05);
+function generateDemoData(): OptionsRow[] {
+  const months = [
+    '12 févr. 2026', '13 févr. 2026', '17 févr. 2026', '24 févr. 2026',
+    '26 mars 2026', '27 avr. 2026', '26 mai 2026', '25 juin 2026',
+    '28 juil. 2026', '26 août 2026', '24 sept. 2026', '27 oct. 2026',
+    '24 nov. 2026', '28 déc. 2026', '26 janv. 2027', '24 mars 2027',
+  ];
 
-    strikes.push({
-      strike,
-      callBid: Math.round(callPrice * 95) / 100,
-      callAsk: Math.round(callPrice * 105) / 100,
-      callLast: Math.round(callPrice * 100) / 100,
-      callVolume: Math.floor(Math.random() * 5000),
-      callOI: Math.floor(Math.random() * 20000),
-      callIV: Math.round(callIV * 10) / 10,
-      putBid: Math.round(putPrice * 95) / 100,
-      putAsk: Math.round(putPrice * 105) / 100,
-      putLast: Math.round(putPrice * 100) / 100,
-      putVolume: Math.floor(Math.random() * 5000),
-      putOI: Math.floor(Math.random() * 20000),
-      putIV: Math.round(putIV * 10) / 10,
-    });
-  }
-  return strikes;
-}
+  return months.map((exp, i) => {
+    const daysOut = (i + 1) * 15;
+    const callIV = 30 + Math.random() * 20;
+    const putIV = 32 + Math.random() * 20;
+    const callPrice = 2 + Math.random() * 10 + i * 0.5;
+    const putPrice = 2 + Math.random() * 10 + i * 0.5;
 
-function getBasePrice(symbol: string): number {
-  const prices: Record<string, number> = {
-    CL: 72.50, NG: 3.20, RB: 2.35, HO: 2.65,
-    ZC: 450, ZW: 560, ZS: 1050, KC: 195, CT: 78,
-    GC: 2040, SI: 24.50, HG: 3.85, PL: 920,
-    '6E': 1.0850, '6B': 1.2650, '6J': 0.0067, '6A': 0.6550, '6C': 0.7380,
-  };
-  return prices[symbol] || 100;
-}
-
-function getStepSize(symbol: string): number {
-  const steps: Record<string, number> = {
-    CL: 1, NG: 0.05, RB: 0.05, HO: 0.05,
-    ZC: 5, ZW: 5, ZS: 10, KC: 2.5, CT: 1,
-    GC: 10, SI: 0.50, HG: 0.05, PL: 10,
-    '6E': 0.005, '6B': 0.005, '6J': 0.0001, '6A': 0.005, '6C': 0.005,
-  };
-  return steps[symbol] || 1;
+    return {
+      expiration: exp,
+      callBidIV: callIV - 5,
+      callAskIV: callIV + 5,
+      callIntrinsic: Math.random() * 2,
+      callTimeValue: callPrice * 0.8,
+      callRho: 0.01 * (i + 1),
+      callVega: 0.05 + i * 0.02,
+      callTheta: -(0.5 + Math.random()),
+      callGamma: 0.05 - i * 0.002,
+      callDelta: 0.55 + Math.random() * 0.1,
+      callPrice,
+      callAsk: callPrice * 1.05,
+      callBid: callPrice * 0.95,
+      callVolume: Math.floor(Math.random() * 100),
+      putVolume: Math.floor(Math.random() * 100),
+      putBid: putPrice * 0.95,
+      putAsk: putPrice * 1.05,
+      putPrice,
+      putDelta: -(0.45 + Math.random() * 0.1),
+      putGamma: 0.05 - i * 0.002,
+      putTheta: -(0.5 + Math.random()),
+      putVega: 0.05 + i * 0.02,
+      putRho: -(0.01 * (i + 1)),
+      putTimeValue: putPrice * 0.8,
+      putIntrinsic: Math.random() * 0.5,
+      putAskIV: putIV + 5,
+      putBidIV: putIV - 5,
+    };
+  });
 }
 
 export default Dashboard;
