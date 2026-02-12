@@ -82,22 +82,6 @@ export const CATEGORIES: CategoryTickers = {
     { symbol: 'SIL', name: 'Micro Silver', exchange: 'COMEX', tvSymbol: 'COMEX-SIL1!' },
     { symbol: 'ALI', name: 'Aluminum', exchange: 'COMEX', tvSymbol: 'COMEX-ALI1!' },
   ],
-  'Indices': [
-    { symbol: 'ES', name: 'E-mini S&P 500', exchange: 'CME', tvSymbol: 'CME-ES1!' },
-    { symbol: 'NQ', name: 'E-mini Nasdaq 100', exchange: 'CME', tvSymbol: 'CME-NQ1!' },
-    { symbol: 'YM', name: 'E-mini Dow Jones', exchange: 'CBOT', tvSymbol: 'CBOT-YM1!' },
-    { symbol: 'RTY', name: 'E-mini Russell 2000', exchange: 'CME', tvSymbol: 'CME-RTY1!' },
-    { symbol: 'MES', name: 'Micro E-mini S&P', exchange: 'CME', tvSymbol: 'CME-MES1!' },
-    { symbol: 'MNQ', name: 'Micro E-mini Nasdaq', exchange: 'CME', tvSymbol: 'CME-MNQ1!' },
-    { symbol: 'VX', name: 'VIX Futures', exchange: 'CFE', tvSymbol: 'CFE-VX1!' },
-  ],
-  'Taux': [
-    { symbol: 'ZN', name: '10-Year T-Note', exchange: 'CBOT', tvSymbol: 'CBOT-ZN1!' },
-    { symbol: 'ZB', name: '30-Year T-Bond', exchange: 'CBOT', tvSymbol: 'CBOT-ZB1!' },
-    { symbol: 'ZF', name: '5-Year T-Note', exchange: 'CBOT', tvSymbol: 'CBOT-ZF1!' },
-    { symbol: 'ZT', name: '2-Year T-Note', exchange: 'CBOT', tvSymbol: 'CBOT-ZT1!' },
-    { symbol: 'GE', name: 'Eurodollar', exchange: 'CME', tvSymbol: 'CME-GE1!' },
-  ],
   'Devises': [
     { symbol: '6E', name: 'Euro FX', exchange: 'CME', tvSymbol: 'CME-6E1!' },
     { symbol: '6B', name: 'British Pound', exchange: 'CME', tvSymbol: 'CME-6B1!' },
