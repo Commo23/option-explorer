@@ -299,7 +299,7 @@ export async function scrapeOptionsChain(url: string): Promise<{
 }
 
 export function buildTradingViewUrl(tvSymbol: string, strike?: number): string {
-  const base = `https://fr.tradingview.com/options/chain/${tvSymbol}/?view=strikes`;
+  const base = `https://www.tradingview.com/options/chain/${tvSymbol}/?view=strikes`;
   if (strike !== undefined && strike !== null) {
     return `${base}&strike=${strike}`;
   }
