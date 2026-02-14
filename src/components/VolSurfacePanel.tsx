@@ -14,7 +14,8 @@ import {
   type VolSurface,
   type VolType,
 } from '@/lib/vol-surface';
-import { Search, Layers, Loader2 } from 'lucide-react';
+import { VolSurface3D } from '@/components/VolSurface3D';
+import { Search, Layers, Loader2, TrendingUp, BarChart3 } from 'lucide-react';
 
 interface VolSurfacePanelProps {
   data: OptionsRow[];
@@ -58,8 +59,8 @@ export function VolSurfacePanel({
   const [queryType, setQueryType] = useState<VolType>('mid');
   const [interpolatedVol, setInterpolatedVol] = useState<number | null>(null);
   const [queryError, setQueryError] = useState('');
+  const [chartVolType, setChartVolType] = useState<VolType>('mid');
 
-  // Build full surface if multi-strike data exists, else term structure
   const surface: VolSurface | null = useMemo(() => {
     if (surfaceData.size > 1) {
       return buildVolSurface(surfaceData);
@@ -77,7 +78,7 @@ export function VolSurfacePanel({
     setInterpolatedVol(null);
 
     if (!surface) {
-      setQueryError('Pas de surface disponible');
+      setQueryError('Pas de surface disponible. Construisez la nappe d\'abord.');
       return;
     }
 
@@ -95,11 +96,31 @@ export function VolSurfacePanel({
 
     const vol = interpolateVol(surface, s, days, queryType);
     if (vol === null) {
-      setQueryError('Interpolation impossible avec les données disponibles');
+      setQueryError('Interpolation impossible — pas assez de données autour de ce point');
     } else {
       setInterpolatedVol(vol);
     }
   };
+
+  // Find nearest points for context
+  const interpolationContext = useMemo(() => {
+    if (!surface || interpolatedVol === null) return null;
+    const s = parseFloat(queryStrike);
+    const days = dateStringToDays(queryDate);
+    if (isNaN(s) || days === null) return null;
+
+    const nearStrikes = surface.strikes
+      .map(st => ({ strike: st, dist: Math.abs(st - s) }))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 2);
+
+    const nearMats = surface.maturities
+      .map(m => ({ days: m, dist: Math.abs(m - days) }))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 2);
+
+    return { nearStrikes, nearMats, queryDays: days };
+  }, [surface, interpolatedVol, queryStrike, queryDate]);
 
   return (
     <div className="p-3 space-y-4 overflow-auto">
@@ -114,6 +135,7 @@ export function VolSurfacePanel({
               </h3>
               <p className="text-[10px] text-muted-foreground mt-1">
                 Scrape tous les strikes disponibles ({availableStrikes.length} strikes) pour construire une surface complète avec interpolation.
+                Les données sont mises en cache pour éviter les scrapes redondants.
               </p>
               {hasFullSurface && surface && (
                 <p className="text-[10px] text-primary mt-1 font-mono">
@@ -145,12 +167,47 @@ export function VolSurfacePanel({
         </CardContent>
       </Card>
 
+      {/* 3D Surface Chart */}
+      {hasFullSurface && surface && surface.strikes.length >= 2 && (
+        <Card className="border-border bg-card">
+          <CardHeader className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-mono flex items-center gap-2">
+                <BarChart3 className="h-3.5 w-3.5 text-primary" />
+                Surface 3D
+                <Badge variant="outline" className="text-[10px] font-mono">
+                  {surface.strikes.length} × {surface.maturities.length}
+                </Badge>
+              </CardTitle>
+              <Select value={chartVolType} onValueChange={(v) => setChartVolType(v as VolType)}>
+                <SelectTrigger className="h-7 w-20 text-[10px] font-mono bg-secondary border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="call" className="text-xs font-mono">Call</SelectItem>
+                  <SelectItem value="put" className="text-xs font-mono">Put</SelectItem>
+                  <SelectItem value="mid" className="text-xs font-mono">Mid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent className="px-2 pb-2">
+            <VolSurface3D surface={surface} volType={chartVolType} />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Interpolation query */}
       <Card className="border-border bg-card">
         <CardHeader className="py-3 px-4">
           <CardTitle className="text-sm font-mono flex items-center gap-2">
             <Search className="h-3.5 w-3.5 text-primary" />
             Interpoler la volatilité
+            {surface && (
+              <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
+                {surface.points.length} points de données
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-3">
@@ -200,19 +257,38 @@ export function VolSurfacePanel({
               disabled={!surface}
               className="h-8 text-xs gap-1"
             >
+              <TrendingUp className="h-3 w-3" />
               Interpoler
             </Button>
           </div>
+
+          {/* Result card */}
           {interpolatedVol !== null && (
-            <div className="mt-2 p-2 rounded bg-primary/10 border border-primary/20 flex items-center gap-3">
-              <span className="text-[10px] text-muted-foreground font-mono">
-                Vol {queryType.toUpperCase()} interpolée:
-              </span>
-              <span className={`text-lg font-mono font-bold ${volColor(interpolatedVol)}`}>
-                {interpolatedVol.toFixed(2)}%
-              </span>
+            <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20 space-y-2">
+              <div className="flex items-center gap-4">
+                <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">
+                  Vol {queryType.toUpperCase()} interpolée
+                </span>
+                <span className={`text-2xl font-mono font-bold ${volColor(interpolatedVol)}`}>
+                  {interpolatedVol.toFixed(2)}%
+                </span>
+              </div>
+              {interpolationContext && (
+                <div className="text-[10px] text-muted-foreground font-mono space-y-0.5 border-t border-border/50 pt-2">
+                  <p>
+                    Strike demandé: <span className="text-foreground">{queryStrike}</span> — Bornes: [{interpolationContext.nearStrikes.map(s => s.strike).join(', ')}]
+                  </p>
+                  <p>
+                    Maturité: <span className="text-foreground">{interpolationContext.queryDays}j</span> — Bornes: [{interpolationContext.nearMats.map(m => m.days + 'j').join(', ')}]
+                  </p>
+                  <p className="text-primary/70">
+                    Méthode: interpolation bilinéaire sur la grille {surface?.strikes.length}×{surface?.maturities.length}
+                  </p>
+                </div>
+              )}
             </div>
           )}
+
           {queryError && (
             <p className="mt-2 text-[10px] text-destructive font-mono">{queryError}</p>
           )}

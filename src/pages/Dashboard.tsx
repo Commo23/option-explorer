@@ -13,6 +13,7 @@ import {
   parseOptionsTable,
   extractStrikes,
 } from '@/lib/options-api';
+import { scrapeCache } from '@/lib/scrape-cache';
 import { useToast } from '@/components/ui/use-toast';
 
 const Dashboard = () => {
@@ -44,6 +45,13 @@ const Dashboard = () => {
     setSelectedStrike(null);
     setAvailableStrikes([]);
     setSurfaceData(new Map());
+
+    // Restore cached surface data if available
+    const cached = scrapeCache.getAllStrikeData(ticker.tvSymbol);
+    if (cached.size > 0) {
+      setSurfaceData(cached);
+      toast({ title: 'Cache', description: `${cached.size} strikes restaurés depuis le cache.` });
+    }
   };
 
   const handleStrikeChange = (strike: number | null) => {
@@ -54,10 +62,18 @@ const Dashboard = () => {
   };
 
   const doScrape = async (ticker: TickerInfo, strike?: number | null) => {
+    // Check cache first
+    const cached = scrapeCache.get(ticker.tvSymbol, strike);
+    if (cached) {
+      setOptionsData(cached.data);
+      if (cached.strikes.length > 0) setAvailableStrikes(cached.strikes);
+      toast({ title: 'Cache', description: `${cached.data.length} maturités (cache)` });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const url = buildTradingViewUrl(ticker.tvSymbol, strike ?? undefined);
-      console.log('Scraping URL:', url);
       const result = await scrapeOptionsChain(url);
 
       if (result.success) {
@@ -65,48 +81,32 @@ const Dashboard = () => {
         const html = result.data?.data?.html || result.data?.html || '';
 
         const strikes = extractStrikes(markdown, html);
-        if (strikes.length > 0) {
-          setAvailableStrikes(strikes);
-        }
+        if (strikes.length > 0) setAvailableStrikes(strikes);
 
         const parsed = parseOptionsTable(markdown);
 
         if (parsed.length > 0) {
           setOptionsData(parsed);
+          scrapeCache.set(ticker.tvSymbol, strike, parsed, strikes);
           toast({ title: 'Succès', description: `${parsed.length} maturités récupérées` });
         } else {
           const demo = generateDemoData();
           setOptionsData(demo);
-          if (strikes.length === 0) {
-            setAvailableStrikes(generateDemoStrikes());
-          }
-          toast({
-            title: 'Données démo',
-            description: 'Table non trouvée dans le scraping, affichage de données démo.',
-          });
+          if (strikes.length === 0) setAvailableStrikes(generateDemoStrikes());
+          toast({ title: 'Données démo', description: 'Table non trouvée, données démo.' });
         }
       } else {
         const demo = generateDemoData();
         setOptionsData(demo);
-        if (availableStrikes.length === 0) {
-          setAvailableStrikes(generateDemoStrikes());
-        }
-        toast({
-          title: 'Données démo',
-          description: result.error || 'Erreur de scraping, affichage de données démo.',
-        });
+        if (availableStrikes.length === 0) setAvailableStrikes(generateDemoStrikes());
+        toast({ title: 'Données démo', description: result.error || 'Erreur de scraping.' });
       }
     } catch (error) {
       console.error('Scrape error:', error);
       const demo = generateDemoData();
       setOptionsData(demo);
-      if (availableStrikes.length === 0) {
-        setAvailableStrikes(generateDemoStrikes());
-      }
-      toast({
-        title: 'Données démo',
-        description: 'Erreur réseau, affichage de données démo.',
-      });
+      if (availableStrikes.length === 0) setAvailableStrikes(generateDemoStrikes());
+      toast({ title: 'Données démo', description: 'Erreur réseau, données démo.' });
     } finally {
       setIsLoading(false);
     }
@@ -123,6 +123,7 @@ const Dashboard = () => {
     setIsBuildingSurface(true);
     const newSurfaceData = new Map<number, OptionsRow[]>();
     const total = availableStrikes.length;
+    let skipped = 0;
 
     toast({
       title: 'Construction de la nappe',
@@ -133,6 +134,14 @@ const Dashboard = () => {
       const strike = availableStrikes[i];
       setBuildProgress({ current: i + 1, total });
 
+      // Check cache first
+      const cached = scrapeCache.get(selectedTicker.tvSymbol, strike);
+      if (cached && cached.data.length > 0) {
+        newSurfaceData.set(strike, cached.data);
+        skipped++;
+        continue;
+      }
+
       try {
         const url = buildTradingViewUrl(selectedTicker.tvSymbol, strike);
         const result = await scrapeOptionsChain(url);
@@ -142,13 +151,13 @@ const Dashboard = () => {
           const parsed = parseOptionsTable(markdown);
           if (parsed.length > 0) {
             newSurfaceData.set(strike, parsed);
+            scrapeCache.set(selectedTicker.tvSymbol, strike, parsed);
           }
         }
       } catch (error) {
         console.error(`Error scraping strike ${strike}:`, error);
       }
 
-      // Small delay to avoid rate limiting
       if (i < total - 1) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
@@ -160,7 +169,7 @@ const Dashboard = () => {
 
     toast({
       title: 'Nappe construite',
-      description: `${newSurfaceData.size}/${total} strikes récupérés avec succès.`,
+      description: `${newSurfaceData.size}/${total} strikes OK (${skipped} depuis le cache).`,
     });
   };
 
@@ -225,7 +234,6 @@ function generateDemoData(): OptionsRow[] {
   ];
 
   return months.map((exp, i) => {
-    const daysOut = (i + 1) * 15;
     const callIV = 30 + Math.random() * 20;
     const putIV = 32 + Math.random() * 20;
     const callPrice = 2 + Math.random() * 10 + i * 0.5;
