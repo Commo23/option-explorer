@@ -24,12 +24,18 @@ const Dashboard = () => {
   const [optionsData, setOptionsData] = useState<OptionsRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Multi-strike surface data
+  const [surfaceData, setSurfaceData] = useState<Map<number, OptionsRow[]>>(new Map());
+  const [isBuildingSurface, setIsBuildingSurface] = useState(false);
+  const [buildProgress, setBuildProgress] = useState<{ current: number; total: number } | null>(null);
+
   const handleCategoryChange = (cat: string) => {
     setSelectedCategory(cat);
     setSelectedTicker(null);
     setOptionsData([]);
     setSelectedStrike(null);
     setAvailableStrikes([]);
+    setSurfaceData(new Map());
   };
 
   const handleTickerChange = (ticker: TickerInfo) => {
@@ -37,11 +43,11 @@ const Dashboard = () => {
     setOptionsData([]);
     setSelectedStrike(null);
     setAvailableStrikes([]);
+    setSurfaceData(new Map());
   };
 
   const handleStrikeChange = (strike: number | null) => {
     setSelectedStrike(strike);
-    // Auto-scrape when strike changes
     if (strike !== null && selectedTicker) {
       doScrape(selectedTicker, strike);
     }
@@ -58,13 +64,11 @@ const Dashboard = () => {
         const markdown = result.data?.data?.markdown || result.data?.markdown || '';
         const html = result.data?.data?.html || result.data?.html || '';
 
-        // Extract strikes from the page (use HTML for reliable extraction)
         const strikes = extractStrikes(markdown, html);
         if (strikes.length > 0) {
           setAvailableStrikes(strikes);
         }
 
-        // Parse options table
         const parsed = parseOptionsTable(markdown);
 
         if (parsed.length > 0) {
@@ -101,6 +105,53 @@ const Dashboard = () => {
     doScrape(selectedTicker, selectedStrike);
   };
 
+  const handleBuildSurface = async () => {
+    if (!selectedTicker || availableStrikes.length === 0) return;
+
+    setIsBuildingSurface(true);
+    const newSurfaceData = new Map<number, OptionsRow[]>();
+    const total = availableStrikes.length;
+
+    toast({
+      title: 'Construction de la nappe',
+      description: `Scraping de ${total} strikes en cours...`,
+    });
+
+    for (let i = 0; i < total; i++) {
+      const strike = availableStrikes[i];
+      setBuildProgress({ current: i + 1, total });
+
+      try {
+        const url = buildTradingViewUrl(selectedTicker.tvSymbol, strike);
+        const result = await scrapeOptionsChain(url);
+
+        if (result.success) {
+          const markdown = result.data?.data?.markdown || result.data?.markdown || '';
+          const parsed = parseOptionsTable(markdown);
+          if (parsed.length > 0) {
+            newSurfaceData.set(strike, parsed);
+          }
+        }
+      } catch (error) {
+        console.error(`Error scraping strike ${strike}:`, error);
+      }
+
+      // Small delay to avoid rate limiting
+      if (i < total - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+
+    setSurfaceData(newSurfaceData);
+    setBuildProgress(null);
+    setIsBuildingSurface(false);
+
+    toast({
+      title: 'Nappe construite',
+      description: `${newSurfaceData.size}/${total} strikes récupérés avec succès.`,
+    });
+  };
+
   return (
     <div className="flex h-screen bg-background terminal-grid">
       <CategorySidebar
@@ -135,6 +186,11 @@ const Dashboard = () => {
             <VolSurfacePanel
               data={optionsData}
               strike={selectedStrike}
+              surfaceData={surfaceData}
+              availableStrikes={availableStrikes}
+              onBuildSurface={handleBuildSurface}
+              isBuildingSurface={isBuildingSurface}
+              buildProgress={buildProgress}
             />
           </TabsContent>
         </Tabs>
