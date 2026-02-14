@@ -95,16 +95,25 @@ export const CATEGORIES: CategoryTickers = {
   ],
 };
 
-/** Parse a European-format number (comma as decimal, spaces/dots as thousands) */
-function parseEuNum(s: string): number | null {
-  if (!s || s.trim() === '—' || s.trim() === '') return null;
-  // Remove spaces and non-breaking spaces
+/** Parse a number that may be in US format (dot decimal) or European format (comma decimal) */
+function parseNum(s: string): number | null {
+  if (!s || s.trim() === '—' || s.trim() === '' || s.trim() === '-') return null;
   let cleaned = s.replace(/[\s\u00A0]/g, '');
-  // Handle negative with −
   cleaned = cleaned.replace('−', '-');
-  // European: 1.234,56 → 1234.56
-  // Remove dots (thousands sep), replace comma with dot (decimal sep)
-  cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  // Remove % sign if present
+  cleaned = cleaned.replace('%', '');
+
+  const lastComma = cleaned.lastIndexOf(',');
+  const lastDot = cleaned.lastIndexOf('.');
+
+  if (lastComma > lastDot) {
+    // European format: 1.234,56 → comma is decimal
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  } else {
+    // US format: 1,234.56 → dot is decimal
+    cleaned = cleaned.replace(/,/g, '');
+  }
+
   const n = parseFloat(cleaned);
   return isNaN(n) ? null : n;
 }
@@ -122,7 +131,7 @@ export function extractStrikes(markdown: string, html?: string): number[] {
         const valStr = m.replace('data-overflow-tooltip-text="', '').replace('"', '');
         // Only parse values that look like numbers (European format with comma or plain numbers)
         if (/^[\d\s.,]+$/.test(valStr)) {
-          const val = parseEuNum(valStr);
+          const val = parseNum(valStr);
           if (val !== null && val > 0) {
             strikes.push(val);
           }
@@ -137,7 +146,7 @@ export function extractStrikes(markdown: string, html?: string): number[] {
     if (itemMatches) {
       for (const m of itemMatches) {
         const valStr = m.replace(/itemContent-[^"]*">/, '').replace('</span>', '');
-        const val = parseEuNum(valStr);
+        const val = parseNum(valStr);
         if (val !== null && val > 0) {
           strikes.push(val);
         }
@@ -156,7 +165,7 @@ export function extractStrikes(markdown: string, html?: string): number[] {
     const euMatches = preTable.match(/\d[\d\s.]*,\d+/g);
     if (euMatches) {
       for (const m of euMatches) {
-        const val = parseEuNum(m);
+        const val = parseNum(m);
         if (val !== null && val > 0) {
           strikes.push(val);
         }
@@ -200,7 +209,7 @@ export function extractCurrentStrike(markdown: string): number | null {
     // Get the first match which is usually the current/near-month
     const numMatch = matches[0].match(/([\d,.]+)\s*$/);
     if (numMatch) {
-      return parseEuNum(numMatch[1]);
+      return parseNum(numMatch[1]);
     }
   }
   return null;
@@ -249,32 +258,32 @@ export function parseOptionsTable(markdown: string): OptionsRow[] {
 
       rows.push({
         expiration: expStr.trim(),
-        callBidIV: parseEuNum(cells[0]),
-        callAskIV: parseEuNum(cells[1]),
-        callIntrinsic: parseEuNum(cells[2]),
-        callTimeValue: parseEuNum(cells[3]),
-        callRho: parseEuNum(cells[4]),
-        callVega: parseEuNum(cells[5]),
-        callTheta: parseEuNum(cells[6]),
-        callGamma: parseEuNum(cells[7]),
-        callDelta: parseEuNum(cells[8]),
-        callPrice: parseEuNum(cells[9]),
-        callAsk: parseEuNum(cells[10]),
-        callBid: parseEuNum(cells[11]),
-        callVolume: parseEuNum(cells[12]),
-        putVolume: parseEuNum(cells[14]),
-        putBid: parseEuNum(cells[15]),
-        putAsk: parseEuNum(cells[16]),
-        putPrice: parseEuNum(cells[17]),
-        putDelta: parseEuNum(cells[18]),
-        putGamma: parseEuNum(cells[19]),
-        putTheta: parseEuNum(cells[20]),
-        putVega: parseEuNum(cells[21]),
-        putRho: parseEuNum(cells[22]),
-        putTimeValue: parseEuNum(cells[23]),
-        putIntrinsic: parseEuNum(cells[24]),
-        putAskIV: parseEuNum(cells[25]),
-        putBidIV: parseEuNum(cells[26]),
+        callBidIV: parseNum(cells[0]),
+        callAskIV: parseNum(cells[1]),
+        callIntrinsic: parseNum(cells[2]),
+        callTimeValue: parseNum(cells[3]),
+        callRho: parseNum(cells[4]),
+        callVega: parseNum(cells[5]),
+        callTheta: parseNum(cells[6]),
+        callGamma: parseNum(cells[7]),
+        callDelta: parseNum(cells[8]),
+        callPrice: parseNum(cells[9]),
+        callAsk: parseNum(cells[10]),
+        callBid: parseNum(cells[11]),
+        callVolume: parseNum(cells[12]),
+        putVolume: parseNum(cells[14]),
+        putBid: parseNum(cells[15]),
+        putAsk: parseNum(cells[16]),
+        putPrice: parseNum(cells[17]),
+        putDelta: parseNum(cells[18]),
+        putGamma: parseNum(cells[19]),
+        putTheta: parseNum(cells[20]),
+        putVega: parseNum(cells[21]),
+        putRho: parseNum(cells[22]),
+        putTimeValue: parseNum(cells[23]),
+        putIntrinsic: parseNum(cells[24]),
+        putAskIV: parseNum(cells[25]),
+        putBidIV: parseNum(cells[26]),
       });
     }
   }
