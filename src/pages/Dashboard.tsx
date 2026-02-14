@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { CategorySidebar } from '@/components/CategorySidebar';
 import { OptionsTable } from '@/components/OptionsTable';
+import { VolSurfacePanel } from '@/components/VolSurfacePanel';
 import { Toolbar } from '@/components/Toolbar';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   CATEGORIES,
   type TickerInfo,
@@ -117,11 +119,25 @@ const Dashboard = () => {
           isLoading={isLoading}
           dataCount={optionsData.length}
         />
-        <OptionsTable
-          data={optionsData}
-          strike={selectedStrike}
-          isLoading={isLoading}
-        />
+        <Tabs defaultValue="chain" className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="mx-3 mt-2 w-fit bg-secondary">
+            <TabsTrigger value="chain" className="text-xs font-mono">Chaîne d'options</TabsTrigger>
+            <TabsTrigger value="volsurface" className="text-xs font-mono">Nappe de Vol</TabsTrigger>
+          </TabsList>
+          <TabsContent value="chain" className="flex-1 overflow-hidden mt-0">
+            <OptionsTable
+              data={optionsData}
+              strike={selectedStrike}
+              isLoading={isLoading}
+            />
+          </TabsContent>
+          <TabsContent value="volsurface" className="flex-1 overflow-auto mt-0">
+            <VolSurfacePanel
+              data={optionsData}
+              strike={selectedStrike}
+            />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
