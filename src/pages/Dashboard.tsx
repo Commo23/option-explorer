@@ -75,14 +75,22 @@ const Dashboard = () => {
           setOptionsData(parsed);
           toast({ title: 'Succès', description: `${parsed.length} maturités récupérées` });
         } else {
-          setOptionsData(generateDemoData());
+          const demo = generateDemoData();
+          setOptionsData(demo);
+          if (strikes.length === 0) {
+            setAvailableStrikes(generateDemoStrikes());
+          }
           toast({
             title: 'Données démo',
             description: 'Table non trouvée dans le scraping, affichage de données démo.',
           });
         }
       } else {
-        setOptionsData(generateDemoData());
+        const demo = generateDemoData();
+        setOptionsData(demo);
+        if (availableStrikes.length === 0) {
+          setAvailableStrikes(generateDemoStrikes());
+        }
         toast({
           title: 'Données démo',
           description: result.error || 'Erreur de scraping, affichage de données démo.',
@@ -90,7 +98,11 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Scrape error:', error);
-      setOptionsData(generateDemoData());
+      const demo = generateDemoData();
+      setOptionsData(demo);
+      if (availableStrikes.length === 0) {
+        setAvailableStrikes(generateDemoStrikes());
+      }
       toast({
         title: 'Données démo',
         description: 'Erreur réseau, affichage de données démo.',
@@ -198,6 +210,11 @@ const Dashboard = () => {
     </div>
   );
 };
+
+function generateDemoStrikes(): number[] {
+  const base = 70;
+  return Array.from({ length: 15 }, (_, i) => base + i * 2.5);
+}
 
 function generateDemoData(): OptionsRow[] {
   const months = [
