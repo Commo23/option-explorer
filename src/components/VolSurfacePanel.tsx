@@ -62,8 +62,8 @@ export function VolSurfacePanel({
   const [chartVolType, setChartVolType] = useState<VolType>('mid');
 
   // Strike range selection
-  const [strikeMin, setStrikeMin] = useState<string>('');
-  const [strikeMax, setStrikeMax] = useState<string>('');
+  const [strikeMin, setStrikeMin] = useState<string>('all-min');
+  const [strikeMax, setStrikeMax] = useState<string>('all-max');
 
   const selectedStrikes = useMemo(() => {
     const min = (strikeMin && strikeMin !== 'all-min') ? parseFloat(strikeMin) : -Infinity;
