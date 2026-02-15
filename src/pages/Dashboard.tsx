@@ -117,12 +117,12 @@ const Dashboard = () => {
     doScrape(selectedTicker, selectedStrike);
   };
 
-  const handleBuildSurface = async () => {
-    if (!selectedTicker || availableStrikes.length === 0) return;
+  const handleBuildSurface = async (selectedStrikes: number[]) => {
+    if (!selectedTicker || selectedStrikes.length === 0) return;
 
     setIsBuildingSurface(true);
     const newSurfaceData = new Map<number, OptionsRow[]>();
-    const total = availableStrikes.length;
+    const total = selectedStrikes.length;
     let skipped = 0;
 
     toast({
@@ -131,7 +131,7 @@ const Dashboard = () => {
     });
 
     for (let i = 0; i < total; i++) {
-      const strike = availableStrikes[i];
+      const strike = selectedStrikes[i];
       setBuildProgress({ current: i + 1, total });
 
       // Check cache first
