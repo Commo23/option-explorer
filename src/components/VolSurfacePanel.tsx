@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { OptionsRow } from '@/lib/options-api';
 import {
@@ -14,6 +15,7 @@ import {
   type VolSurface,
   type VolType,
 } from '@/lib/vol-surface';
+import { interpolateGrid } from '@/lib/vol-interpolate';
 import { VolSurface3D } from '@/components/VolSurface3D';
 import { Search, Layers, Loader2, TrendingUp, BarChart3 } from 'lucide-react';
 
@@ -60,6 +62,7 @@ export function VolSurfacePanel({
   const [interpolatedVol, setInterpolatedVol] = useState<number | null>(null);
   const [queryError, setQueryError] = useState('');
   const [chartVolType, setChartVolType] = useState<VolType>('mid');
+  const [interpolateMissing, setInterpolateMissing] = useState(false);
 
   // Strike range selection
   const [strikeMin, setStrikeMin] = useState<string>('all-min');
@@ -72,14 +75,22 @@ export function VolSurfacePanel({
   }, [availableStrikes, strikeMin, strikeMax]);
 
   const surface: VolSurface | null = useMemo(() => {
+    let raw: VolSurface | null = null;
     if (surfaceData.size > 1) {
-      return buildVolSurface(surfaceData);
+      raw = buildVolSurface(surfaceData);
+    } else if (data.length > 0 && strike !== null) {
+      raw = buildTermStructure(data, strike);
     }
-    if (data.length > 0 && strike !== null) {
-      return buildTermStructure(data, strike);
-    }
-    return null;
-  }, [data, strike, surfaceData]);
+    if (!raw) return null;
+    if (!interpolateMissing) return raw;
+
+    return {
+      ...raw,
+      gridCall: interpolateGrid(raw.gridCall, raw.strikes, raw.maturities),
+      gridPut: interpolateGrid(raw.gridPut, raw.strikes, raw.maturities),
+      gridMid: interpolateGrid(raw.gridMid, raw.strikes, raw.maturities),
+    };
+  }, [data, strike, surfaceData, interpolateMissing]);
 
   const hasFullSurface = surfaceData.size > 1;
 
@@ -234,16 +245,26 @@ export function VolSurfacePanel({
                   {surface.strikes.length} × {surface.maturities.length}
                 </Badge>
               </CardTitle>
-              <Select value={chartVolType} onValueChange={(v) => setChartVolType(v as VolType)}>
-                <SelectTrigger className="h-7 w-20 text-[10px] font-mono bg-secondary border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="call" className="text-xs font-mono">Call</SelectItem>
-                  <SelectItem value="put" className="text-xs font-mono">Put</SelectItem>
-                  <SelectItem value="mid" className="text-xs font-mono">Mid</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <Checkbox
+                    checked={interpolateMissing}
+                    onCheckedChange={(v) => setInterpolateMissing(!!v)}
+                    className="h-3.5 w-3.5"
+                  />
+                  <span className="text-[10px] font-mono text-muted-foreground">Interpoler</span>
+                </label>
+                <Select value={chartVolType} onValueChange={(v) => setChartVolType(v as VolType)}>
+                  <SelectTrigger className="h-7 w-20 text-[10px] font-mono bg-secondary border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="call" className="text-xs font-mono">Call</SelectItem>
+                    <SelectItem value="put" className="text-xs font-mono">Put</SelectItem>
+                    <SelectItem value="mid" className="text-xs font-mono">Mid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="px-2 pb-2">
