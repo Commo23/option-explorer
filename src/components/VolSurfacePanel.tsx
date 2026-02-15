@@ -22,7 +22,7 @@ interface VolSurfacePanelProps {
   strike: number | null;
   surfaceData: Map<number, OptionsRow[]>;
   availableStrikes: number[];
-  onBuildSurface: () => void;
+  onBuildSurface: (selectedStrikes: number[]) => void;
   isBuildingSurface: boolean;
   buildProgress: { current: number; total: number } | null;
 }
@@ -60,6 +60,16 @@ export function VolSurfacePanel({
   const [interpolatedVol, setInterpolatedVol] = useState<number | null>(null);
   const [queryError, setQueryError] = useState('');
   const [chartVolType, setChartVolType] = useState<VolType>('mid');
+
+  // Strike range selection
+  const [strikeMin, setStrikeMin] = useState<string>('');
+  const [strikeMax, setStrikeMax] = useState<string>('');
+
+  const selectedStrikes = useMemo(() => {
+    const min = (strikeMin && strikeMin !== 'all-min') ? parseFloat(strikeMin) : -Infinity;
+    const max = (strikeMax && strikeMax !== 'all-max') ? parseFloat(strikeMax) : Infinity;
+    return availableStrikes.filter(s => s >= min && s <= max);
+  }, [availableStrikes, strikeMin, strikeMax]);
 
   const surface: VolSurface | null = useMemo(() => {
     if (surfaceData.size > 1) {
@@ -126,7 +136,7 @@ export function VolSurfacePanel({
     <div className="p-3 space-y-4 overflow-auto">
       {/* CTA: Build full surface */}
       <Card className="border-primary/30 bg-card">
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-3">
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1">
               <h3 className="text-sm font-mono font-semibold text-foreground flex items-center gap-2">
@@ -134,7 +144,7 @@ export function VolSurfacePanel({
                 Construire la nappe de volatilité
               </h3>
               <p className="text-[10px] text-muted-foreground mt-1">
-                Scrape tous les strikes disponibles ({availableStrikes.length} strikes) pour construire une surface complète avec interpolation.
+                Sélectionnez l'intervalle de strikes à scraper, puis lancez la construction.
                 Les données sont mises en cache pour éviter les scrapes redondants.
               </p>
               {hasFullSurface && surface && (
@@ -143,27 +153,72 @@ export function VolSurfacePanel({
                 </p>
               )}
             </div>
-            <Button
-              onClick={onBuildSurface}
-              disabled={isBuildingSurface || availableStrikes.length === 0}
-              className="gap-2 shrink-0"
-              size="sm"
-            >
-              {isBuildingSurface ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  {buildProgress
-                    ? `${buildProgress.current}/${buildProgress.total}`
-                    : 'Construction...'}
-                </>
-              ) : (
-                <>
-                  <Layers className="h-3.5 w-3.5" />
-                  {hasFullSurface ? 'Reconstruire' : 'Construire la nappe'}
-                </>
-              )}
-            </Button>
           </div>
+
+          {/* Strike range selectors */}
+          {availableStrikes.length > 0 && (
+            <div className="flex items-end gap-2 flex-wrap">
+              <div className="w-36">
+                <label className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">
+                  Strike min
+                </label>
+                <Select value={strikeMin} onValueChange={setStrikeMin}>
+                  <SelectTrigger className="h-8 text-xs font-mono bg-secondary border-border">
+                    <SelectValue placeholder="Min" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="all-min" className="text-xs font-mono">— Tous (min)</SelectItem>
+                    {availableStrikes.map((s) => (
+                      <SelectItem key={s} value={s.toString()} className="text-xs font-mono">
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-36">
+                <label className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">
+                  Strike max
+                </label>
+                <Select value={strikeMax} onValueChange={setStrikeMax}>
+                  <SelectTrigger className="h-8 text-xs font-mono bg-secondary border-border">
+                    <SelectValue placeholder="Max" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="all-max" className="text-xs font-mono">— Tous (max)</SelectItem>
+                    {availableStrikes.map((s) => (
+                      <SelectItem key={s} value={s.toString()} className="text-xs font-mono">
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Badge variant="outline" className="text-[10px] font-mono h-8 flex items-center">
+                {selectedStrikes.length} / {availableStrikes.length} strikes
+              </Badge>
+              <Button
+                onClick={() => onBuildSurface(selectedStrikes)}
+                disabled={isBuildingSurface || selectedStrikes.length === 0}
+                className="gap-2 shrink-0 h-8"
+                size="sm"
+              >
+                {isBuildingSurface ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    {buildProgress
+                      ? `${buildProgress.current}/${buildProgress.total}`
+                      : 'Construction...'}
+                  </>
+                ) : (
+                  <>
+                    <Layers className="h-3.5 w-3.5" />
+                    {hasFullSurface ? 'Reconstruire' : 'Construire la nappe'}
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
