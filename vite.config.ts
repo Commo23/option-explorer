@@ -18,12 +18,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  optimizeDeps: {
-    include: ['plotly.js-dist-min'],
-  },
-  build: {
-    commonjsOptions: {
-      include: [/plotly/, /node_modules/],
-    },
-  },
 }));
